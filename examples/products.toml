@@ -1,0 +1,35 @@
+version = 1
+namespace = "sdk_examples"
+table = "products"
+primary_key = ["id"]
+extractions = []
+foreign_keys = []
+check_constraints = []
+triggers = []
+
+[[columns]]
+name = "id"
+ty = "str"
+required = true
+
+[[columns]]
+name = "name"
+ty = "str"
+
+[[columns]]
+name = "description"
+ty = "str"
+
+[[columns]]
+name = "related_to"
+ty = "str"
+
+[[relations]]
+name = "related"
+from_col = "related_to"
+bidirectional = true
+
+[relations.target]
+namespace = "sdk_examples"
+table = "products"
+pk = "id"
