@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: ${{ matrix.os }} / ${{ matrix.runtime }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            runtime: "1.23.x"
+          - os: ubuntu-latest
+            runtime: "stable"
+          - os: windows-latest
+            runtime: "stable"
+          - os: macos-latest
+            runtime: "stable"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "${{ matrix.runtime }}"
+          cache: false
+      - name: Unit tests
+        run: go test ./...
+      - name: Static analysis
+        run: go vet ./...
+      - name: HTTP contract
+        run: python tests/contract/run.py -- go run ./tests/consumer

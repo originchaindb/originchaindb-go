@@ -1,0 +1,26 @@
+# Local credentials and build outputs
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+node_modules/
+dist/
+target/
+bin/
+obj/
+vendor/
+.bundle/
+*.gem
+*.nupkg
+*.snupkg
+*.tgz
+test-results/
+playwright-report/
+test-results.json
+*.log

@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "connection": [
+    "OC_URL",
+    "OC_TOKEN"
+  ],
+  "default_timeout_seconds": 60,
+  "automatic_retries": false,
+  "follow_redirects": false,
+  "namespaces": [
+    "sql",
+    "schemas",
+    "rows",
+    "vector",
+    "fts",
+    "graph"
+  ],
+  "contract_test_sha256": "e3097a94215fd27628edc736777ebe52647b6039228f89d4bdebc119d292a41e"
+}
