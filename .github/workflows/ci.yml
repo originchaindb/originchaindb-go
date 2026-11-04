@@ -101,14 +101,14 @@ jobs:
           python scripts/artifact_manifest.py
       - name: Retain benchmark evidence
         if: always()
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: sdk-benchmark
           path: benchmark-results.json
           if-no-files-found: error
           retention-days: 14
       - name: Retain verified package candidates
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: sdk-verified-build
           path: artifacts/*
@@ -144,7 +144,7 @@ jobs:
             gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY"
           done
       - name: Retain provenance bundle
-        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: sdk-build-provenance
           path: ${{ steps.attest.outputs.bundle-path }}
