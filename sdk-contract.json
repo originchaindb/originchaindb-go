@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "connection": [
     "OC_URL",
     "OC_TOKEN"
@@ -26,5 +26,25 @@
     "observer_includes_request_data": false,
     "typed_row_mapping": true,
     "mapping_preserves_raw_rows": true
-  }
+  },
+  "bounded_iteration": {
+    "default_batch_rows": 1000,
+    "maximum_batch_rows": 10000,
+    "default_batch_bytes": 1048576,
+    "maximum_batch_bytes": 8388608,
+    "prefetch": false,
+    "automatic_replay": false,
+    "write_acknowledgement": "per batch, input offset/count/inserted",
+    "failed_write_outcome": [
+      "not_sent",
+      "unknown"
+    ],
+    "pagination": "bound keyset SQL over a unique immutable non-null string key in UTF-8 binary order",
+    "default_page_rows": 1000,
+    "maximum_page_rows": 10000,
+    "snapshot_guarantee": false
+  },
+  "iteration_test_sha256": "6833a3789fc9cfcf0708b547a2596fd822dc74fb98f6e3ee98aac76f89603287",
+  "benchmark_test_sha256": "e9a6823c602f199b355d613f21c76d1d275132640d326e0ae086ee0ac139a8d9",
+  "api_guard_sha256": "8272c57fbf694786229f02da1309f00dbb52076a01db05c5daef52aa430297e9"
 }

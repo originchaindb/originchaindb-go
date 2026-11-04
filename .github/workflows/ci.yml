@@ -41,7 +41,7 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           repository: originchaindb/.github
-          ref: a47804a80fc5b31022d241dc814d905f6f78e723
+          ref: 073b0396db55c903ca114f15fab8cf83c4b92e3d
           path: .contract-reference
           persist-credentials: false
       - name: Verify cross-language contract
@@ -57,3 +57,96 @@ jobs:
       - name: Race detector
         if: runner.os == 'Linux'
         run: go test -race ./...
+
+      - name: Bounded iteration contract
+        run: |
+          python tests/contract/iteration.py -- go run ./tests/iteration
+      - name: Public API compatibility
+        run: |
+          python scripts/check_api.py -- go run ./scripts/api_surface.go
+
+  quality:
+    name: Performance and package verification
+    needs: [verify]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      COMPOSER_ROOT_VERSION: 1.0.0-rc.1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "1.23.x"
+          cache: false
+      - name: Prepare SDK and benchmark
+        run: |
+          go mod download
+          python -m pip install psutil==7.2.2
+          mkdir -p artifacts
+      - name: Build and install package candidate
+        run: |
+          go build -o benchmarks/consumer-bin ./benchmarks/consumer
+          git archive --format=tar.gz --prefix=originchaindb-go/ -o artifacts/originchaindb-go-source.tar.gz HEAD
+          python scripts/verify_artifact.py
+      - name: Measure transport and check performance baseline
+        run: |
+          python benchmarks/run.py --platform github-ubuntu24-x64 --baseline benchmarks/baseline.json --output benchmark-results.json  -- ./benchmarks/consumer-bin
+      - name: Record exact artifact hashes
+        run: |
+          python scripts/artifact_manifest.py
+      - name: Retain benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        with:
+          name: sdk-benchmark
+          path: benchmark-results.json
+          if-no-files-found: error
+          retention-days: 14
+      - name: Retain verified package candidates
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        with:
+          name: sdk-verified-build
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
+
+  provenance:
+    name: Sign and verify build provenance
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0
+        with:
+          name: sdk-verified-build
+          path: artifacts
+      - name: Attest verified build artifacts
+        id: attest
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6
+        with:
+          subject-path: artifacts/*
+          push-to-registry: false
+      - name: Verify signed provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for artifact in artifacts/*; do
+            gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY"
+          done
+      - name: Retain provenance bundle
+        uses: actions/upload-artifact@ff15f0306b3f739f7b6fd43fb5d26cd321bd4de5
+        with:
+          name: sdk-build-provenance
+          path: ${{ steps.attest.outputs.bundle-path }}
+          if-no-files-found: error
+          retention-days: 14

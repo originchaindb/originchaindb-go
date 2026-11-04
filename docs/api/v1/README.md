@@ -100,7 +100,7 @@ result before deciding how the application should recover.
 CI compiles/runs the native consumer, shared 24-request HTTP contract, nine-request
 resilience contract, and applicable language tests. Those consumers exercise the
 public core API and fail when a required method, type or behavior is removed.
-The shared fixtures are pinned to the [organization contract](https://github.com/originchaindb/.github/tree/a47804a80fc5b31022d241dc814d905f6f78e723/sdk-contract/v1).
+The shared fixtures are pinned to the [organization contract](https://github.com/originchaindb/.github/tree/073b0396db55c903ca114f15fab8cf83c4b92e3d/sdk-contract/v1).
 Changes to either fixture must be coordinated across all eight SDKs.
 
 These checks cover the shared core. Changes to additional helpers also require

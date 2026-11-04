@@ -25,3 +25,9 @@ playwright-report/
 test-results.json
 *.log
 .contract-reference/
+
+# Local quality and attested build outputs
+artifacts/
+benchmark-results.json
+benchmarks/consumer-bin
+benchmarks/consumer.exe
