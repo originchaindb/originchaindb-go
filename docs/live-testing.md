@@ -24,3 +24,7 @@ server-side fixtures and separate evidence for that deployed server version.
 For multimodel verification, run the README's catalog example in a dedicated
 namespace/database. It exercises SQL, rows, vector search, full-text search and
 graph traversal and writes demonstration data. Do not run it against customer data.
+
+The separate live token qualification and its limits are described in
+[Database access tokens](authentication.md#verification). The read-only workflow
+above does not create or rotate tokens and does not reproduce that qualification.
