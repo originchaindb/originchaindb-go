@@ -14,4 +14,10 @@
 - Shared failure tests, pinned cross-language contract, versioned API and migration guides.
 - Complete application integration example and manually dispatched live verification.
 
+- Lazy bounded batch writes with acknowledged ranges and explicit unknown outcomes.
+- Keyset pages and row iteration over unique immutable string keys, with native cancellation.
+- Three-workload transport benchmarks, reviewed CI baselines and public API compatibility guards.
+- Fresh application installation checks and signed CI artifact provenance.
+- Complete bulk/read/resume example and detailed recovery guidance.
+
 This candidate has not been published to package registries.

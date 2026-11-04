@@ -1,0 +1,18 @@
+version = 1
+namespace = "sdk_iteration"
+table = "items"
+primary_key = ["id"]
+extractions = []
+foreign_keys = []
+check_constraints = []
+triggers = []
+relations = []
+
+[[columns]]
+name = "id"
+ty = "str"
+required = true
+
+[[columns]]
+name = "name"
+ty = "str"

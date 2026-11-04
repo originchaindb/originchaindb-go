@@ -95,7 +95,11 @@ jobs:
           python scripts/verify_artifact.py
       - name: Measure transport and check performance baseline
         run: |
+          python -c "import json; from pathlib import Path; b=json.loads(Path('benchmarks/baseline.json').read_text()); assert b['platform']=='github-ubuntu24-x64'"
           python benchmarks/run.py --platform github-ubuntu24-x64 --baseline benchmarks/baseline.json --output benchmark-results.json  -- ./benchmarks/consumer-bin
+      - name: Check bulk and pagination example
+        run: |
+          go build ./examples/bulk-and-scan
       - name: Record exact artifact hashes
         run: |
           python scripts/artifact_manifest.py

@@ -88,3 +88,16 @@ observer isolation, and native model conversion. Exact request counts catch
 replays and skipped consumers. These fixtures do not certify live token lifecycle
 policy. Cancellation follows each language's runtime; synchronous credential
 providers must return promptly from an application-managed credential cache.
+
+## Bounded iteration and quality (contract schema 3)
+
+The 21-request iteration fixture checks lazy acknowledged writes, row and byte
+bounds, producer failures, unknown outcomes without replay, early stop, keyset
+continuation and invalid pages. All SDKs default to 1,000 rows / 1 MiB per batch
+and 1,000 rows per page. Read [bulk and pagination](bulk-and-pagination.md) for
+supported keys and recovery semantics.
+
+The same contract pins the performance harness and conservative public API guard.
+Native consumers and extractors stay language-specific. Reviewed baselines live
+in each SDK. See [quality checks](quality.md) for measurements, thresholds,
+package installation and signed provenance.

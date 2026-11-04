@@ -21,7 +21,7 @@ for these operations, with native Go types and conventions.
 From your application's Go module, install the verified source revision:
 
 ```sh
-go get github.com/originchaindb/originchaindb-go@0597afb11f5ce06ead401573ac6ca3fac0c85298
+go get github.com/originchaindb/originchaindb-go@dde36c7021e687ce6852a63554ffcbdb1983fa7c
 ```
 
 For a new application, first create a directory and run `go mod init example.com/myapp`.
@@ -234,6 +234,25 @@ The graph namespace also supports breadth-first traversal and Cypher queries.
 Cypher parameters bind **by name**; SQL parameters bind **by position**.
 See the [API guide](docs/api.md) and source links below for exact signatures.
 
+## Bulk writes and paginated reads
+
+For larger datasets, `WriteBatches` sends bounded batches and yields an acknowledgment
+for each input range. `Scan` reads rows lazily in ordered pages; `Pages` also
+exposes a continuation value for resumable processing. These operations use the
+same limits and failure rules across all SDKs.
+
+```go
+for batch, err := range db.Rows.WriteBatches(ctx, schema, rows, oc.BatchOptions{BatchSize: 2}) {
+    if err != nil { return err }
+    fmt.Println(batch.Offset, batch.Count, batch.Inserted)
+}
+```
+
+This excerpt uses `db`, `schema` and the lazy `rows` producer from the
+[complete example](examples/bulk-and-scan/main.go). See the [bulk and pagination guide](docs/bulk-and-pagination.md)
+for setup, reads, checkpoints, cancellation and recovery. Failed writes are never
+replayed automatically; paginated reads require a unique immutable string key.
+
 ## Understanding SQL results
 
 Rows are `[]map[string]any`; JSON numbers are `json.Number`. SQL returns a result object rather than only an array:
@@ -364,3 +383,5 @@ requirements are listed at the top. Live examples use your selected database.
 Read [Contributing](CONTRIBUTING.md) before sending a change. Report bugs through
 [GitHub issues](https://github.com/originchaindb/originchaindb-go/issues); report security concerns
 privately as described in [Security](SECURITY.md). See [LICENSE](LICENSE) for MIT terms.
+
+See [quality and build verification](docs/quality.md) for benchmarks, API compatibility checks, package installation checks and signed build provenance.

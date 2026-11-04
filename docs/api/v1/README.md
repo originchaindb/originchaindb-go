@@ -11,7 +11,7 @@ for complete signatures, native types and language-specific helpers.
 | --- | --- |
 | SQL | `SQL.Run / SQL.Query / SQL.Execute` |
 | Schemas | `Schemas.List / Schemas.Get / Schemas.Register` |
-| Rows | `Rows.Get / Rows.Put / Rows.PutBatch` |
+| Rows | `Rows.Get / Rows.Put / Rows.PutBatch`  `WriteBatches / Pages / Scan` |
 | Vectors | `Vector.Put / Vector.Search / Vector.Delete` |
 | Full-text search | `FTS.Index / FTS.Search` |
 | Graph | `Graph.Query / Graph.Neighbors / Graph.BFS` |
@@ -26,6 +26,15 @@ Rows use a schema name and primary key. Schema registration accepts TOML text.
 Vector search returns IDs and scores; full-text search returns hits plus metadata
 when supplied by the server. Graph operations use the relations declared in the
 schema. The README has complete setup and query examples for each resource.
+
+## Bounded iteration
+
+`WriteBatches` yields BatchResult (offset, count, inserted); `Pages` yields RowPage
+(rows, `NextCursor`); `Scan` yields individual rows. Their iterators are lazy,
+sequential, and do not automatically retry writes. `BatchWriteError` identifies an
+unconfirmed input range and its original cause. Read the [bulk and pagination
+guide](../../bulk-and-pagination.md) for exact limits, supported key types,
+cancellation and checkpoint semantics.
 
 ## Configure an application
 
@@ -98,7 +107,7 @@ result before deciding how the application should recover.
 ## Compatibility checks
 
 CI compiles/runs the native consumer, shared 24-request HTTP contract, nine-request
-resilience contract, and applicable language tests. Those consumers exercise the
+resilience contract, 21-request bounded iteration contract, public API baseline, and applicable language tests. Those consumers exercise the
 public core API and fail when a required method, type or behavior is removed.
 The shared fixtures are pinned to the [organization contract](https://github.com/originchaindb/.github/tree/073b0396db55c903ca114f15fab8cf83c4b92e3d/sdk-contract/v1).
 Changes to either fixture must be coordinated across all eight SDKs.

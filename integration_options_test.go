@@ -51,6 +51,7 @@ func TestRotatingCredentialsAndSafeObservation(t *testing.T) {
 	if !reflect.DeepEqual(headers, []string{"Bearer secret-1", "Bearer secret-2"}) {
 		t.Fatal("token was not resolved per request")
 	}
+	// Windows clock resolution can report zero for a completed loopback call.
 	if len(events) != 2 || events[0].Status != 401 || events[0].ErrorKind != "authentication" || events[1].ErrorKind != "" || events[1].RequestID != "request-123" || events[1].Duration < 0 {
 		t.Fatalf("incorrect events: %+v", events)
 	}

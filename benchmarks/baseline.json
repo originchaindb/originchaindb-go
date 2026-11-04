@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "platform": "github-ubuntu24-x64",
+  "metrics": {
+    "sequential_p50_ms": 0.212991,
+    "sequential_p95_ms": 0.262925,
+    "sequential_p99_ms": 0.280171,
+    "sequential_requests_per_second": 4645.910318971013,
+    "concurrent_p50_ms": 5.314216,
+    "concurrent_p95_ms": 6.22387,
+    "concurrent_p99_ms": 6.756271,
+    "concurrent_requests_per_second": 1427.7594859726757,
+    "large_p50_ms": 9.300504,
+    "large_p95_ms": 10.689659,
+    "large_p99_ms": 10.689659,
+    "large_requests_per_second": 101.79031866171789,
+    "peak_rss_bytes": 18182144
+  },
+  "source": {
+    "repository": "originchaindb/originchaindb-go",
+    "commit": "dde36c7021e687ce6852a63554ffcbdb1983fa7c",
+    "workflow_run": "https://github.com/originchaindb/originchaindb-go/actions/runs/41793957440",
+    "run_id": 41793957440,
+    "artifact": "sdk-benchmark",
+    "sha256": "7fcc4591536d6c3ffbcd718b65b75aa36f0f57f487b8f21ba5a454cd7414e18a"
+  },
+  "method": "Median of three fresh process runs on standard Ubuntu 24.04 x64 CI; see docs/quality.md."
+}
