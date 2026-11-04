@@ -1,0 +1,36 @@
+name: Live integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployment:
+        description: Nonsecret server deployment/version identifier for this receipt
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-integration
+  cancel-in-progress: false
+
+jobs:
+  live:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: sdk-integration
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff
+        with:
+          go-version: "stable"
+      - name: Run read-only integration example
+        env:
+          OC_URL: ${{ secrets.OC_URL }}
+          OC_TOKEN: ${{ secrets.OC_TOKEN }}
+          OC_DEPLOYMENT: ${{ inputs.deployment }}
+        run: python3 scripts/run_live.py -- go run ./examples/integration

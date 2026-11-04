@@ -9,4 +9,9 @@
 - Encoded resource paths, no automatic write retries, and no redirect following.
 - Shared HTTP conformance tests and source-only CI.
 
+- Application-managed rotating credential providers and local redacted request observers.
+- Native transport configuration and typed row conversion with explicit conversion errors.
+- Shared failure tests, pinned cross-language contract, versioned API and migration guides.
+- Complete application integration example and manually dispatched live verification.
+
 This candidate has not been published to package registries.

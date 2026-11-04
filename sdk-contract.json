@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "connection": [
     "OC_URL",
     "OC_TOKEN"
@@ -15,5 +15,16 @@
     "fts",
     "graph"
   ],
-  "contract_test_sha256": "e3097a94215fd27628edc736777ebe52647b6039228f89d4bdebc119d292a41e"
+  "contract_test_sha256": "e3097a94215fd27628edc736777ebe52647b6039228f89d4bdebc119d292a41e",
+  "api_version": "1",
+  "resilience_test_sha256": "83275d1afc630e6fed12798794610de97fe21211921729338be38704f8a75588",
+  "application_integration": {
+    "rotating_credentials": true,
+    "credential_resolution": "once per logical request",
+    "replay_after_authentication_failure": false,
+    "local_request_observer": true,
+    "observer_includes_request_data": false,
+    "typed_row_mapping": true,
+    "mapping_preserves_raw_rows": true
+  }
 }

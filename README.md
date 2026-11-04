@@ -320,6 +320,14 @@ Include the SDK version and request ID in a support report. Redact credentials
 and application data. Available database features and token permissions still
 determine which operations can run.
 
+## Application integration
+
+The [API v1 reference](docs/api/v1/README.md) covers typed row conversion,
+rotating credentials, local request diagnostics, native HTTP configuration,
+and cancellation. The [complete integration example](examples/integration/main.go) shows
+these features together using a read-only query. See the
+[migration guide](docs/migration-v1.md) when upgrading an earlier application.
+
 ## Source layout
 
 The Go package lives in the repository root. A `src/` directory is not required.

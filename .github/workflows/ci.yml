@@ -37,9 +37,23 @@ jobs:
         with:
           go-version: "${{ matrix.runtime }}"
           cache: false
+      - name: Check out the shared API v1 contract
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: originchaindb/.github
+          ref: a47804a80fc5b31022d241dc814d905f6f78e723
+          path: .contract-reference
+          persist-credentials: false
+      - name: Verify cross-language contract
+        run: python scripts/check_contract.py
       - name: Unit tests
         run: go test ./...
       - name: Static analysis
         run: go vet ./...
       - name: HTTP contract
         run: python tests/contract/run.py -- go run ./tests/consumer
+      - name: Resilience contract
+        run: python tests/contract/resilience.py -- go run ./tests/resilience
+      - name: Race detector
+        if: runner.os == 'Linux'
+        run: go test -race ./...

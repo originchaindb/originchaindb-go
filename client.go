@@ -27,6 +27,8 @@ const maxResponseBytes int64 = 32 << 20
 type Client struct {
 	endpoint string
 	token    string
+	provider TokenProvider
+	observer func(RequestEvent)
 	http     *http.Client
 	SQL      *SQLService
 	Rows     *RowsService
@@ -65,6 +67,13 @@ func WithTransport(transport http.RoundTripper) Option {
 // New uses the address copied from Connect. Its path is opaque: no database ID
 // is inferred. HTTPS is required except for a loopback development server.
 func New(address, token string, options ...Option) (*Client, error) {
+	return NewClient(Config{URL: address, Token: token}, options...)
+}
+
+// NewClient adds rotating credentials and local observation to New. Configure a
+// client once, then share it. Provider and observer callbacks must be concurrent-safe.
+func NewClient(config Config, options ...Option) (*Client, error) {
+	address, token := config.URL, config.Token
 	parsed, err := url.Parse(address)
 	if err != nil || parsed.Hostname() == "" || parsed.User != nil ||
 		strings.ContainsAny(address, "?#\\") || strings.IndexFunc(address, func(r rune) bool { return r <= 32 || r == 127 }) >= 0 {
@@ -77,7 +86,10 @@ func New(address, token string, options ...Option) (*Client, error) {
 	if parsed.Scheme != "https" && !(parsed.Scheme == "http" && loopback) {
 		return nil, errors.New("database URL must use HTTPS; HTTP is allowed only on loopback")
 	}
-	if token == "" || strings.IndexFunc(token, func(r rune) bool { return r <= 32 || r >= 127 }) >= 0 {
+	if config.TokenProvider != nil && token != "" {
+		return nil, errors.New("configure either Token or TokenProvider, not both")
+	}
+	if config.TokenProvider == nil && !validToken(token) {
 		return nil, errors.New("token must be a nonempty printable ASCII value without spaces")
 	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
@@ -90,7 +102,7 @@ func New(address, token string, options ...Option) (*Client, error) {
 			return nil, err
 		}
 	}
-	c := &Client{endpoint: strings.TrimRight(address, "/"), token: token, http: client}
+	c := &Client{endpoint: strings.TrimRight(address, "/"), token: token, http: client, provider: config.TokenProvider, observer: config.OnRequest}
 	c.SQL = &SQLService{c}
 	c.Rows = &RowsService{c}
 	c.Schemas = &SchemasService{c}
@@ -131,7 +143,46 @@ func (e *Error) Error() string {
 }
 func (e *Error) Unwrap() error { return e.cause }
 
-func (c *Client) request(ctx context.Context, method, path string, query url.Values, body any, textBody *string) (any, error) {
+func (c *Client) request(ctx context.Context, method, path string, query url.Values, body any, textBody *string) (value any, resultErr error) {
+	event := RequestEvent{Method: method, Operation: operation(path)}
+	started := time.Now()
+	defer func() {
+		event.Duration = time.Since(started)
+		if resultErr != nil {
+			event.ErrorKind = "client"
+			var sdkError *Error
+			if errors.As(resultErr, &sdkError) {
+				event.ErrorKind = sdkError.Kind
+			}
+		}
+		notify(c.observer, event)
+	}()
+	ctx, cancel := context.WithTimeout(ctx, c.http.Timeout)
+	defer cancel()
+	if err := ctx.Err(); err != nil {
+		kind := "canceled"
+		if errors.Is(err, context.DeadlineExceeded) {
+			kind = "timeout"
+		}
+		return nil, &Error{Kind: kind, cause: err}
+	}
+	token := c.token
+	if c.provider != nil {
+		var err error
+		token, err = c.provider(ctx)
+		if err != nil {
+			kind := "credential"
+			if errors.Is(err, context.DeadlineExceeded) {
+				kind = "timeout"
+			} else if errors.Is(err, context.Canceled) {
+				kind = "canceled"
+			}
+			return nil, &Error{Kind: kind, cause: err}
+		}
+		if !validToken(token) {
+			return nil, &Error{Kind: "credential"}
+		}
+	}
 	var data []byte
 	var err error
 	contentType := "application/json"
@@ -152,7 +203,7 @@ func (c *Client) request(ctx context.Context, method, path string, query url.Val
 	if err != nil {
 		return nil, err
 	}
-	request.Header.Set("Authorization", "Bearer "+c.token)
+	request.Header.Set("Authorization", "Bearer "+token)
 	request.Header.Set("Accept", "application/json")
 	request.Header.Set("User-Agent", "originchaindb-go/"+Version)
 	if data != nil {
@@ -175,6 +226,8 @@ func (c *Client) request(ctx context.Context, method, path string, query url.Val
 		return nil, &Error{Kind: kind, cause: err}
 	}
 	defer response.Body.Close()
+	event.Status = response.StatusCode
+	event.RequestID = response.Header.Get("X-OC-Request-Id")
 	raw, err := io.ReadAll(io.LimitReader(response.Body, maxResponseBytes+1))
 	if err != nil {
 		return nil, &Error{Kind: "transport", Status: response.StatusCode, cause: err}
@@ -182,7 +235,6 @@ func (c *Client) request(ctx context.Context, method, path string, query url.Val
 	if int64(len(raw)) > maxResponseBytes {
 		return nil, &Error{Kind: "protocol", Status: response.StatusCode}
 	}
-	var value any
 	if len(raw) > 0 {
 		decoder := json.NewDecoder(bytes.NewReader(raw))
 		decoder.UseNumber()

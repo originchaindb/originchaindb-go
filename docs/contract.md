@@ -66,3 +66,25 @@ actual HTTP requests, exact parameter values, opaque paths, complete SQL results
 partial failures, numeric precision, authentication errors, redirects, and retry counts.
 Live acceptance is separate and requires an isolated namespace. A passing fixture
 suite is not a claim that every server version or access-token lifecycle is deployed.
+
+## Application integration (contract schema 2)
+
+Each SDK supports an optional credential provider, local request observer, and
+row conversion into application models. Providers resolve once per logical call;
+an authentication failure never triggers a refresh-and-replay. Observers receive
+only method, operation family, elapsed time, status, request ID, and error category.
+They do not receive URLs, schema names, SQL, parameters, payloads, or credentials.
+Observers describe the HTTP exchange; a later result/model conversion can fail.
+
+Native type systems and serializers determine row conversion rules. Python,
+TypeScript, PHP and Ruby accept explicit application decoders; Rust, Go, Java and
+.NET also provide native deserialization. Conversion leaves the raw result intact
+and reports the zero-based failing row without returning a partial list.
+
+`tests/contract/resilience.py` is shared unchanged across the eight SDKs. Its
+nine requests cover expired/revoked token responses, permissions, rate limiting,
+an interrupted response after a simulated write, timeout, credential rotation,
+observer isolation, and native model conversion. Exact request counts catch
+replays and skipped consumers. These fixtures do not certify live token lifecycle
+policy. Cancellation follows each language's runtime; synchronous credential
+providers must return promptly from an application-managed credential cache.
