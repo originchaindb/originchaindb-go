@@ -21,7 +21,7 @@ for these operations, with native Go types and conventions.
 From your application's Go module, install the verified source revision:
 
 ```sh
-go get github.com/originchaindb/originchaindb-go@ae14dc013a72152456ad7cc9fc135e107b042726
+go get github.com/originchaindb/originchaindb-go@0597afb11f5ce06ead401573ac6ca3fac0c85298
 ```
 
 For a new application, first create a directory and run `go mod init example.com/myapp`.
