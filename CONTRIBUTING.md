@@ -14,3 +14,11 @@ from OpenAPI. Review the language's transport, cancellation and error convention
 
 CI builds and tests source and package artifacts. It does not publish packages or
 create releases. Publication requires a separate approved release task.
+
+
+Before changing a public API or accepting a performance baseline, read
+[quality checks](docs/quality.md). Preserve existing public signatures, review
+baseline diffs explicitly, and verify complete examples as well as native tests.
+The CI workflow lists the exact commands, supported runtime matrix, package
+installation check and provenance verification. Baselines must come from a
+successful run on the matching platform, with the source and run recorded.

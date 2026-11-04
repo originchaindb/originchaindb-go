@@ -145,7 +145,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           for artifact in artifacts/*; do
-            gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY"
+            gh attestation verify "$artifact" --repo "$GITHUB_REPOSITORY" --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/ci.yml" --source-digest "$GITHUB_SHA" --source-ref refs/heads/main
           done
       - name: Retain provenance bundle
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

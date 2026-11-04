@@ -72,9 +72,12 @@ Download `sdk-verified-build` from the exact successful run, inspect `build.json
 then verify each intended file before installing it:
 
 ```sh
-gh attestation verify PATH_TO_ARTIFACT --repo originchaindb/originchaindb-go
+gh attestation verify PATH_TO_ARTIFACT --repo originchaindb/originchaindb-go \
+  --signer-workflow originchaindb/originchaindb-go/.github/workflows/ci.yml \
+  --source-digest REVIEWED_COMMIT_SHA --source-ref refs/heads/main
 ```
 
+Replace `REVIEWED_COMMIT_SHA` with the reviewed source revision from that run.
 Check the returned source revision and workflow identity against the run you
 intended to consume. An attestation establishes artifact origin; it does not
 replace review, tests or a vulnerability assessment. See GitHub's
@@ -87,6 +90,20 @@ run and artifact digest. Install that exact version in a fresh application, veri
 the registry's provenance/signature where supported, and run a connection smoke
 test before updating production. Never substitute an older registry package for
 this source candidate just because it has the same package name.
+
+## Registry installation after publication resumes
+
+The following is a future installation template, not an available version.
+Replace `RELEASED_VERSION` (or `RELEASED_TAG` for Go) with the exact version
+announced in a verified release. Confirm its registry coordinate and provenance
+first. Until then, use the source instructions in the README.
+
+```sh
+go get github.com/originchaindb/originchaindb-go@RELEASED_TAG
+go mod tidy
+```
+
+Commit your application's dependency lockfile and review its resolved version.
 
 ## Real-server compatibility
 
