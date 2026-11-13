@@ -52,6 +52,8 @@ jobs:
         run: go vet ./...
       - name: HTTP contract
         run: python tests/contract/run.py -- go run ./tests/consumer
+      - name: Vector index HTTP contract
+        run: python tests/contract/vector_indexes.py -- go run ./tests/vectorindexes
       - name: Resilience contract
         run: python tests/contract/resilience.py -- go run ./tests/resilience
       - name: Race detector

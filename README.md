@@ -197,6 +197,10 @@ for _, hit := range hits {
 Each hit exposes an ID, score, optional metadata, and the original hit. Do not
 assume the score is a probability; its interpretation depends on the metric.
 
+These calls store vectors per table. For named indexes with namespaces, batch
+upserts, metadata filters, sparse, keyword and hybrid search, see
+[Vector indexes](#vector-indexes).
+
 ### Search text
 
 Index the description explicitly, then use ranked BM25 search. Search defaults
@@ -257,6 +261,128 @@ This excerpt uses `db`, `schema` and the lazy `rows` producer from the
 for setup, reads, checkpoints, cancellation and recovery. Failed writes are never
 replayed automatically; paginated reads require a unique immutable string key.
 
+## Vector indexes
+
+`db.VectorIndexes` holds the record operations on vector indexes. An index
+holds namespaces, and a namespace holds records. A record has an `id` and any
+of a dense vector (`values`), a sparse vector (`sparse_values`), flat
+`metadata` and declared `text` fields. Every call takes the index by its name
+or its `index_id`, and record calls always name a namespace
+(`oc.VectorDefaultNamespace`, `"__default__"`, is the default one). These
+routes are separate from the per-table `db.Vector` calls; the two never share
+data.
+
+```go
+vi := db.VectorIndexes
+
+// Create an index. Metric is "cosine", "dot", "l2" or "manhattan".
+_, err := vi.CreateIndex(ctx, "products", oc.CreateIndexOptions{Dimension: 4, Metric: "cosine", Sparse: true,
+	TextFields: []oc.VectorTextField{{Name: "body", Analyzer: "standard_en_v1"}}})
+if err != nil { return err }
+for index, err := range vi.AllIndexes(ctx, oc.ListIndexesOptions{}) {
+	if err != nil { return err }
+	fmt.Println(index["name"], index["state"])
+}
+
+// Upsert replaces the whole record. The namespace is created on first write.
+records := []map[string]any{
+	{"id": "p1", "values": []float64{0.1, 0.2, 0.3, 0.4},
+		"metadata": map[string]any{"category": "tools", "price": 12.5},
+		"text":     map[string]any{"body": "steel claw hammer"}},
+	{"id": "p2", "values": []float64{0.4, 0.3, 0.2, 0.1},
+		"sparse_values": map[string]any{"indices": []int{3, 9}, "values": []float64{0.2, 0.5}},
+		"metadata":      map[string]any{"category": "garden"}},
+}
+if _, err := vi.Upsert(ctx, "products", "catalog", oc.FromSlice(records), oc.UpsertOptions{}); err != nil {
+	return err
+}
+
+// Dense search with a metadata filter.
+res, err := vi.Search(ctx, "products", "catalog", oc.IndexSearchOptions{
+	K: 5, Vector: []float64{0.1, 0.2, 0.3, 0.4},
+	FilterExpr: map[string]any{"category": map[string]any{"$eq": "tools"}, "price": map[string]any{"$lt": 20}},
+	IncludeMetadata: oc.Ptr(true),
+})
+if err != nil { return err }
+hits, _ := res["hits"].([]any)
+for _, hit := range hits {
+	h, _ := hit.(map[string]any)
+	fmt.Println(h["id"], h["score"], h["metadata"])
+}
+
+// Hybrid search: dense plus keyword (BM25), fused by reciprocal rank. Search by
+// the stored vector of a record with RecordID, or send a Sparse query.
+res, err = vi.Search(ctx, "products", "catalog", oc.IndexSearchOptions{
+	K: 5, Vector: []float64{0.1, 0.2, 0.3, 0.4},
+	Lexical: map[string]any{"field": "body", "query": "hammer"},
+})
+if err != nil { return err }
+
+// Fetch keys records by id and lists the ids it did not find.
+got, err := vi.Fetch(ctx, "products", "catalog", []string{"p1", "p9"}, oc.FetchOptions{IncludeValues: oc.Ptr(true)})
+if err != nil { return err }
+fmt.Println(got["records"], got["missing"])
+if _, err := vi.Update(ctx, "products", "catalog", "p1", oc.UpdateOptions{MetadataMerge: map[string]any{"price": 11.0}}); err != nil {
+	return err
+}
+for id, err := range vi.AllIDs(ctx, "products", "catalog", oc.ListIDsOptions{}) {
+	if err != nil { return err }
+	fmt.Println(id)
+}
+
+// Deleting by filter is a background job; poll it until state is not queued or running.
+job, err := vi.DeleteByFilter(ctx, "products", "catalog", oc.DeleteByFilterOptions{
+	FilterExpr: map[string]any{"category": map[string]any{"$eq": "garden"}},
+})
+if err != nil { return err }
+jobID, _ := job["job_id"].(string)
+status, err := vi.GetJob(ctx, "products", jobID)
+if err != nil { return err }
+fmt.Println(status["state"])
+```
+
+Use the fragment in a function returning `error`; `ctx` is a `context.Context`
+and `oc` imports this module.
+
+Things to know:
+
+- **Batching.** The engine accepts at most 1,000 records and 2,000,000 bytes
+  per upsert request. `Upsert` reads its input lazily, sends it in requests
+  under both bounds, in order, each record exactly once, and returns an
+  `UpsertResult` (`UpsertedCount`, `NamespaceCreated`, `Batches`, `Receipts`).
+  Each request commits on its own. A failure returns a `*BatchWriteError` with
+  the input range that was not acknowledged (`Offset`, `Count`, and `Outcome`
+  `not_sent` or `unknown`); every record before `Offset` is written and counted
+  in the result, and `Unwrap` gives the cause. Nothing is sent again
+  automatically. `UpsertBatches` yields one `UpsertBatchResult` per
+  acknowledged request instead. `oc.FromSlice` turns a slice into input.
+- **Search.** `K` is required. One query leg is a semantic (dense or sparse)
+  or keyword search; two or more legs are a hybrid search. `Quality` is
+  `"fast"`, `"high_recall"` (the default) or `"exact"`. Scores are always
+  higher-is-better; `res["completeness"]` says whether an approximate leg may
+  have missed records. Search returns metadata only with `IncludeMetadata`
+  set to `oc.Ptr(true)`; `Fetch` returns it unless you set it to false.
+- **Filters.** `FilterExpr` takes operators such as `$eq`, `$ne`, `$in`,
+  `$gt`, `$exists`, `$and` and `$or`; `Filter` takes a plain equality map.
+  Set at most one.
+- **Updates and deletes.** `Update` changes one record in place and keeps the
+  fields it does not name. `UpdateByFilter` and `DeleteByFilter` run as
+  background jobs; `DryRun` only reports how many records match. Calling
+  `DeleteNamespace` or `DeleteAll` is the confirmation the engine asks for.
+- **Paging.** `AllIndexes`, `AllNamespaces`, `AllIDs` and `AllRecords` hold one
+  page in memory and do not prefetch, starting at the options' `Cursor`. They
+  are not snapshots.
+- **Results.** Each call returns the server's JSON object as a
+  `map[string]any`. Numbers are `json.Number` and fields this SDK does not
+  know are kept.
+- **Errors and retries.** Failures are `*oc.Error`. Branch on `Code` plus
+  `Reason` (the envelope's `error.details.reason`), not on `Status` alone;
+  `Details` holds the rest, `Message` the server's message, and `Retryable`
+  says whether the same request can succeed later. A database that does not
+  serve these operations answers with a 501 that matches
+  `errors.Is(err, oc.ErrRecordAPINotEnabled)`. With `Config.MaxRetries` set,
+  reads are retried; writes never are.
+
 ## Understanding SQL results
 
 Rows are `[]map[string]any`; JSON numbers are `json.Number`. SQL returns a result object rather than only an array:
@@ -305,7 +431,8 @@ and `time`. `Close` releases idle connections; cancel the context to interrupt a
 active call.
 
 Requests are **not retried automatically by the SDK by default**, and redirects
-are not followed. A timeout or disconnect can happen after a write committed.
+are not followed. `Config.MaxRetries` opts the [vector index](#vector-indexes)
+read operations into retries; writes are never sent twice. A timeout or disconnect can happen after a write committed.
 Canceling the local wait does not prove rollback. Only retry an operation when
 your application can safely reconcile or repeat it.
 
@@ -329,6 +456,9 @@ fmt.Println(result.Rows)
 Import `errors` and `fmt`, and use the fragment in a function returning `error`.
 `Kind` distinguishes HTTP, transport, timeout, protocol, and batch failures.
 For a batch failure, `Run` also returns the available partial result alongside the error.
+When the server answers with a structured error envelope, `Code`, `Reason`,
+`Details`, `Message` and `Retryable` carry its fields; `Error()` still leaves
+out the server's text.
 
 | Symptom | What to check |
 | --- | --- |
@@ -359,6 +489,7 @@ The Go package lives in the repository root. A `src/` directory is not required.
 | --- | --- |
 | [client.go](client.go) | Client, configuration and HTTP transport |
 | [resources.go](resources.go) | Schema, row, vector, full-text and graph services |
+| [vector_indexes.go](vector_indexes.go), [retry.go](retry.go) | Vector index record operations and read retries |
 | [sql.go](sql.go) | SQL operations and results |
 | [search.go](search.go), [vector.go](vector.go) | Search result types |
 | [examples/](examples/) | Quickstart, product catalog and schema |
