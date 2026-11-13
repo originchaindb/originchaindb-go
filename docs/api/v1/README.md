@@ -13,6 +13,7 @@ for complete signatures, native types and language-specific helpers.
 | Schemas | `Schemas.List / Schemas.Get / Schemas.Register` |
 | Rows | `Rows.Get / Rows.Put / Rows.PutBatch`  `WriteBatches / Pages / Scan` |
 | Vectors | `Vector.Put / Vector.Search / Vector.Delete` |
+| Vector indexes | `VectorIndexes.CreateIndex / DescribeIndex / ListIndexes / AllIndexes / ConfigureIndex / DeleteIndex / IndexStats`  `CreateNamespace / DescribeNamespace / ListNamespaces / AllNamespaces / ConfigureNamespace / DeleteNamespace / BuildIndex`  `Upsert / UpsertBatches / Fetch / FetchByFilter / AllRecords / ListIDs / AllIDs / Count / Update / UpdateByFilter / Delete / DeleteByFilter / DeleteAll`  `GetJob / CancelJob / Search` |
 | Full-text search | `FTS.Index / FTS.Search` |
 | Graph | `Graph.Query / Graph.Neighbors / Graph.BFS` |
 | Usage and query metrics | `Usage / QueryMetrics` |
@@ -42,6 +43,12 @@ cancellation and checkpoint semantics.
 
 Existing static-token constructors remain supported. Choose one credential source.
 Copy the entire database address from Connect; no tenant path is inferred.
+
+`Config.MaxRetries` (0 to 99, default 0) sends a vector index read again after a
+transport failure, a timeout, or HTTP 429, 500, 502, 503 or 504, honoring
+`Retry-After`, within `Config.MaxRetryTime` (default 30 seconds). Every attempt
+keeps the logical request ID and the observer runs once. Writes and the other
+services' operations are always sent once.
 
 Use WithTransport(http.RoundTripper) for custom TLS roots, proxy settings or tests. The SDK disables HTTP redirects. Close releases idle connections through the configured transport; active calls are unaffected.
 
@@ -111,6 +118,10 @@ resilience contract, 21-request bounded iteration contract, public API baseline,
 public core API and fail when a required method, type or behavior is removed.
 The shared fixtures are pinned to the [organization contract](https://github.com/originchaindb/.github/tree/073b0396db55c903ca114f15fab8cf83c4b92e3d/sdk-contract/v1).
 Changes to either fixture must be coordinated across all eight SDKs.
+
+The 23-request vector index fixture (`tests/contract/vector_indexes.py`, run
+against `tests/vectorindexes`) is shared unchanged with the Python SDK but is
+not yet part of the pinned organization contract.
 
 These checks cover the shared core. Changes to additional helpers also require
 their native tests and API review. Fixtures model authentication failures; they

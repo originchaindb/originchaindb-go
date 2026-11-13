@@ -17,6 +17,18 @@ type Config struct {
 	Token         string
 	TokenProvider TokenProvider
 	OnRequest     func(RequestEvent)
+	// MaxRetries is how many more times a VectorIndexes read (describe, list,
+	// fetch, count, statistics, search, job status) is sent after a transport
+	// failure, a timeout, or HTTP 429, 500, 502, 503 or 504. Every attempt
+	// keeps the logical request ID. Zero, the default, sends each request once.
+	// It goes from 0 to 99. Writes, and the other services' operations, are
+	// always sent once.
+	MaxRetries int
+	// MaxRetryTime bounds the time from the start of a call within which a
+	// retry may begin; a wait that would end later is not taken. A Retry-After
+	// header sets the wait when present, else a jittered backoff up to four
+	// seconds does. Zero selects 30 seconds.
+	MaxRetryTime time.Duration
 }
 
 func (Config) String() string   { return "OriginChainDB Config" }

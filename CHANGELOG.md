@@ -20,4 +20,14 @@
 - Fresh application installation checks and signed CI artifact provenance.
 - Complete bulk/read/resume example and detailed recovery guidance.
 
+- Vector indexes on `VectorIndexes`: index create, describe, list, configure, delete and
+  statistics; namespaces; lazily batched upsert with acknowledged ranges; fetch, fetch by
+  filter, list ids and count; update and delete by id, by filter or all; jobs; dense,
+  sparse, keyword and hybrid search with metadata filters.
+- Structured error envelopes populate `Code`, `Message`, `Reason`, `Details` and
+  `Retryable` on `*Error`; `errors.Is(err, ErrRecordAPINotEnabled)` matches a database
+  that does not serve vector indexes.
+- `Config.MaxRetries` and `Config.MaxRetryTime` retry vector index reads; writes are never
+  sent twice. `FromSlice` and `Ptr` helpers.
+
 This candidate has not been published to package registries.

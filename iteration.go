@@ -161,6 +161,18 @@ func (s *RowsService) WriteBatches(ctx context.Context, schema string, rows iter
 	}
 }
 
+// FromSlice yields each value of a slice with a nil error, for the lazy inputs
+// of WriteBatches, VectorIndexesService.Upsert and UpsertBatches.
+func FromSlice[T any](values []T) iter.Seq2[T, error] {
+	return func(yield func(T, error) bool) {
+		for _, value := range values {
+			if !yield(value, nil) {
+				return
+			}
+		}
+	}
+}
+
 var simpleIdentifier = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
 
 func keysetQuery(schema, key string, size int, after *string) (string, []any, error) {
